@@ -1,5 +1,5 @@
 """
-Master runner — executes all Phase 1 scripts in sequence.
+Master runner — executes all pipeline scripts in sequence.
 Stops on any error so you can fix before continuing.
 
 Usage:
@@ -14,17 +14,22 @@ import time
 import argparse
 
 SCRIPTS = [
-    ("01_download_and_profile.py", "Download & Profile (this takes the longest)"),
-    ("02_join_and_flatten.py",     "Join tables on study_id"),
-    ("03_clean_drug_identity.py",  "Clean Drug Identity"),
-    ("04_clean_trial_info.py",     "Clean Trial Info"),
-    ("05_clean_adverse_events.py", "Clean Adverse Events"),
-    ("06_clean_patient_cohort.py", "Clean Patient Cohort"),
-    ("07_clean_dosage.py",         "Clean Dosage"),
+    ("01_download_and_profile.py",    "Download & Profile (this takes the longest)"),
+    ("02_join_and_flatten.py",        "Join tables on study_id"),
+    ("03_clean_drug_identity.py",     "Clean Drug Identity"),
+    ("04_clean_trial_info.py",        "Clean Trial Info"),
+    ("05_clean_adverse_events.py",    "Clean Adverse Events"),
+    ("06_clean_patient_cohort.py",    "Clean Patient Cohort"),
+    ("07_clean_dosage.py",            "Clean Dosage"),
     ("08_derive_toxicity_profile.py", "Derive Toxicity Profile"),
-    ("09_aggregate_to_drugs.py",   "Aggregate to Drug Level"),
-    ("10_validate_and_export.py",  "Validate & Export"),
+    ("09_aggregate_to_drugs.py",      "Aggregate to Drug Level"),
+    ("10_validate_and_export.py",     "Validate & Export"),
+    ("11_fetch_publication_links.py", "Fetch Publication Links"),
+    ("12_fill_with_paperqa.py",       "Fill Phase 2 Columns with PaperQA"),
+    ("13_final_cleanups.py",          "Final Cleanups"),
 ]
+
+NUM_SCRIPTS = len(SCRIPTS)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -40,20 +45,20 @@ def main():
     total_start = time.time()
 
     print("="*60)
-    print("TAHOE PHASE 1 — FULL PIPELINE")
+    print("TAHOE — FULL PIPELINE")
     print("="*60)
 
     for i, (script, description) in enumerate(SCRIPTS, 1):
         if args.only and i != args.only:
             continue
         if i < args.start_from:
-            print(f"\n[{i:02d}/10] SKIP — {description}")
+            print(f"\n[{i:02d}/{NUM_SCRIPTS}] SKIP — {description}")
             continue
 
         script_path = os.path.join(scripts_dir, script)
 
         print(f"\n{'#'*60}")
-        print(f"# [{i:02d}/10] {description}")
+        print(f"# [{i:02d}/{NUM_SCRIPTS}] {description}")
         print(f"# Script: {script}")
         print(f"{'#'*60}\n")
 
@@ -73,11 +78,10 @@ def main():
 
         print(f"\n  ✓ Completed in {elapsed:.1f}s")
 
-        # After script 01, pause to remind about column names
         if i == 1 and not args.only:
             print(f"\n{'*'*60}")
             print("* IMPORTANT: Review the profiling output above!")
-            print("* Check that column names match what scripts 02-10 expect.")
+            print("* Check that column names match what scripts 02+ expect.")
             print("* If column names differ, update the scripts before continuing.")
             print("* Press Enter to continue, or Ctrl+C to stop and adjust...")
             print(f"{'*'*60}")
@@ -91,9 +95,11 @@ def main():
     print(f"\n{'='*60}")
     print(f"ALL DONE — Total time: {total_elapsed:.1f}s ({total_elapsed/60:.1f} min)")
     print(f"{'='*60}")
-    print(f"\nOutputs in: {os.path.join(project_root, 'output')}/")
-    print(f"  - gold_standard_table.parquet")
+    print(f"\nOutputs:")
     print(f"  - gold_standard_table.csv")
+    print(f"  - gold_standard_table_cleaned.csv")
+    print(f"  - gold_standard_table_cleaned.parquet")
+    print(f"  - publication_links.csv")
     print(f"  - coverage_report.html")
     print(f"  - coverage_report.csv")
     print(f"  - sample_rows.csv")
